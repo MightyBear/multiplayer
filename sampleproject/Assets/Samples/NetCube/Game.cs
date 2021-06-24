@@ -5,6 +5,7 @@ using Unity.NetCode;
 using Unity.Networking.Transport;
 using Unity.Burst;
 using Unity.Collections;
+using UnityEngine;
 
 public struct EnableNetCubeGame : IComponentData
 {}
@@ -112,15 +113,19 @@ public class GoInGameServerSystem : SystemBase
         }
 
         var commandBuffer = new EntityCommandBuffer(Allocator.Temp);
+
         var networkIdFromEntity = GetComponentDataFromEntity<NetworkIdComponent>(true);
         Entities.WithReadOnly(networkIdFromEntity).ForEach((Entity reqEnt, in GoInGameRequest req, in ReceiveRpcCommandRequestComponent reqSrc) =>
         {
             commandBuffer.AddComponent<NetworkStreamInGame>(reqSrc.SourceConnection);
             UnityEngine.Debug.Log(String.Format("Server setting connection {0} to in game", networkIdFromEntity[reqSrc.SourceConnection].Value));
 
+            var patroller = commandBuffer.Instantiate(prefab);
+            commandBuffer.AddComponent(patroller, new PatrolComponent());
+            commandBuffer.SetComponent(patroller, new GhostOwnerComponent { NetworkId = -1});
+
             var player = commandBuffer.Instantiate(prefab);
             commandBuffer.SetComponent(player, new GhostOwnerComponent { NetworkId = networkIdFromEntity[reqSrc.SourceConnection].Value});
-
             commandBuffer.AddBuffer<CubeInput>(player);
             commandBuffer.SetComponent(reqSrc.SourceConnection, new CommandTargetComponent {targetEntity = player});
 
