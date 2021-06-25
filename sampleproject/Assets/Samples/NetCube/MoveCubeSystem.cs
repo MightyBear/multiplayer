@@ -1,14 +1,12 @@
-using Unity.Collections;
+using Samples.NetCube;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Transforms;
-using UnityEngine;
 
 [UpdateInGroup(typeof(GhostPredictionSystemGroup))]
 public class MoveCubeSystem : SystemBase
 {
     GhostPredictionSystemGroup m_GhostPredictionSystemGroup;
-    float speed = 2;
     protected override void OnCreate()
     {
         m_GhostPredictionSystemGroup = World.GetExistingSystem<GhostPredictionSystemGroup>();
@@ -26,24 +24,24 @@ public class MoveCubeSystem : SystemBase
             CubeInput input;
             inputBuffer.GetDataAtTick(tick, out input);
             if (input.horizontal > 0)
-                trans.Value.x += 2 * deltaTime;
+                trans.Value.x += deltaTime;
             if (input.horizontal < 0)
-                trans.Value.x -= 2 * deltaTime;
+                trans.Value.x -= deltaTime;
             if (input.vertical > 0)
-                trans.Value.z += 2 * deltaTime;
+                trans.Value.z += deltaTime;
             if (input.vertical < 0)
-                trans.Value.z -= 2 * deltaTime;
+                trans.Value.z -= deltaTime;
         }).ScheduleParallel();
 
 
-        Entities.ForEach((ref Translation trans,in PatrolComponent patrol) =>
+        Entities.ForEach((ref Translation trans, ref PatrolComponent patrol) =>
         {
-            if (trans.Value.x > 5f)
-                speed *= -1;
-            if (trans.Value.x < -5f)
-                speed *= -1;
-            trans.Value.x += deltaTime * speed;
-        }).WithoutBurst().Run();
+            if (trans.Value.x > patrol.PosLimit)
+                patrol.MovingRight = false;
+            if (trans.Value.x < -patrol.PosLimit)
+                patrol.MovingRight = true;
+            trans.Value.x += patrol.MovingRight ? patrol.Speed * deltaTime : -patrol.Speed * deltaTime;
+        }).ScheduleParallel();
 
     }
 }

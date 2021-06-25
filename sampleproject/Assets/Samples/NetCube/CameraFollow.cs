@@ -1,34 +1,18 @@
-using UnityEngine;
 using Unity.Entities;
-using Unity.Transforms;
 using Unity.Mathematics;
 using Unity.NetCode;
+using Unity.Transforms;
+using UnityEngine;
 
-public class CameraFollow : MonoBehaviour
+namespace Samples.NetCube
 {
-    public Entity entityToFollow;
-    public float3 offset = float3.zero;
-    private bool lateInit = true;
-    private EntityManager manager;
-    private int frameDelay = 10;
-    private int frameCount = 0;
-
-    private void Awake()
+    public class CameraFollow : MonoBehaviour
     {
-        var worlds = World.All;
-        foreach (var world in worlds)
-        {
-            Debug.Log($"Checking in {world.Name}");
-            if (world.Name == "ClientWorld0")
-                manager = world.EntityManager;
-        }
+        public float3 offset = float3.zero;
+        private Entity EntityToFollow = Entity.Null;
+        private EntityManager manager;
 
-    }
-
-    // Update is called once per frame
-    private void LateUpdate()
-    {
-        if (lateInit && frameCount >= frameDelay)
+        private void Awake()
         {
             var worlds = World.All;
             foreach (var world in worlds)
@@ -37,21 +21,39 @@ public class CameraFollow : MonoBehaviour
                     manager = world.EntityManager;
             }
 
-            var query = new EntityQueryDesc
+        }
+
+        private void InitialiseCamera()
+        {
+            var queryDesc = new EntityQueryDesc
             {
                 None = new ComponentType[] {ComponentType.ReadOnly<PatrolComponent>()},
                 All = new ComponentType[] {typeof(Translation), ComponentType.ReadOnly<PredictedGhostComponent>()}
             };
 
-            entityToFollow = manager.CreateEntityQuery(query).GetSingletonEntity();
-            lateInit = false;
+            EntityQuery query = manager.CreateEntityQuery(queryDesc);
+            if(!query.IsEmpty)
+                EntityToFollow = query.GetSingletonEntity();
         }
-        else if(lateInit)
-            ++frameCount;
 
-        if(entityToFollow == Entity.Null)
-            return;
-        Translation entPos = manager.GetComponentData<Translation>(entityToFollow);
-        transform.position = entPos.Value + offset;
+        // Update is called once per frame
+        private void LateUpdate()
+        {
+            // -- Initialise camera upon first time moving the cube
+            if (EntityToFollow == Entity.Null &&
+                (Input.GetKey("w") ||
+                 Input.GetKey("a") ||
+                 Input.GetKey("s") ||
+                 Input.GetKey("d")))
+            {
+                InitialiseCamera();
+            }
+
+            if (EntityToFollow == Entity.Null)
+                return;
+
+            Translation entPos = manager.GetComponentData<Translation>(EntityToFollow);
+            transform.position = entPos.Value + offset;
+        }
     }
 }

@@ -1,11 +1,11 @@
 ﻿using System;
 using AOT;
+using Samples.NetCube;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Networking.Transport;
 using Unity.Burst;
 using Unity.Collections;
-using UnityEngine;
 
 public struct EnableNetCubeGame : IComponentData
 {}
@@ -121,7 +121,7 @@ public class GoInGameServerSystem : SystemBase
             UnityEngine.Debug.Log(String.Format("Server setting connection {0} to in game", networkIdFromEntity[reqSrc.SourceConnection].Value));
 
             var patroller = commandBuffer.Instantiate(prefab);
-            commandBuffer.AddComponent(patroller, new PatrolComponent());
+            commandBuffer.AddComponent(patroller, new PatrolComponent{MovingRight = true, Speed = 1f, PosLimit = 5f});
             commandBuffer.SetComponent(patroller, new GhostOwnerComponent { NetworkId = -1});
 
             var player = commandBuffer.Instantiate(prefab);
